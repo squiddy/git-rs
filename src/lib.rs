@@ -6,5 +6,7 @@ extern crate flate2;
 extern crate rustc_serialize;
 
 mod objects;
+mod repository;
 
 pub use objects::{Object, read_object_file};
+pub use repository::{find_git_directory};
