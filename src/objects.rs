@@ -50,8 +50,12 @@ impl fmt::Debug for Blob {
 }
 
 pub struct Commit {
-    sha: String,
-    message: String,
+    pub sha: String,
+    pub tree: String,
+    pub parent: Option<String>,
+    pub author: String,
+    pub committer: String,
+    pub message: String,
 }
 
 impl Commit {
@@ -64,13 +68,52 @@ impl Commit {
 impl GitObject for Commit {
     // Construct a commit from the given input.
     fn from_object_data<B: BufRead>(sha: &str, reader: &mut B) -> Result<Commit, &'static str> {
-        let mut message = String::new();
-        reader.read_to_string(&mut message);
+        // Read a line of the form "identifier other information" and returns
+        // it as tuple ("identifier", "other information")
+        fn read_line<B: BufRead>(reader: &mut B) -> (String, String) {
+            let mut buffer = String::new();
+            reader.read_line(&mut buffer).unwrap();
+            let mut iter = buffer.trim().splitn(2, ' ');
+            (iter.next().unwrap().to_string(), iter.next().unwrap().to_string())
+        }
 
-        Ok(Commit {
-            sha: sha.to_string(),
-            message: message,
-        })
+        // Parse tree/parent/author/committer lines.
+        // FIXME This is pretty ugly.
+        let (_, tree) = read_line(reader);
+        let (t, data) = read_line(reader);
+        if t == "parent" {
+            let parent = Some(data);
+            let (_, author) = read_line(reader);
+            let (_, committer) = read_line(reader);
+
+            let mut message = String::new();
+            reader.read_to_string(&mut message);
+
+            Ok(Commit {
+                sha: sha.to_string(),
+                tree: tree,
+                parent: parent,
+                author: author,
+                committer: committer,
+                message: message,
+            })
+        } else {
+            let parent = None;
+            let author = data;
+            let (_, committer) = read_line(reader);
+
+            let mut message = String::new();
+            reader.read_to_string(&mut message);
+
+            Ok(Commit {
+                sha: sha.to_string(),
+                tree: tree,
+                parent: parent,
+                author: author,
+                committer: committer,
+                message: message,
+            })
+        }
     }
 }
 
@@ -213,13 +256,32 @@ mod tests {
 
     #[test]
     fn parse_commit() {
-        let data = vec![0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x20, 0x57, 0x6f, 0x72, 0x6c, 0x64, 0x0a];
+        let data = vec![0x74, 0x72, 0x65, 0x65, 0x20, 0x30, 0x38, 0x66, 0x34, 0x38, 0x36, 0x64,
+                        0x32, 0x37, 0x64, 0x36, 0x33, 0x65, 0x64, 0x37, 0x66, 0x38, 0x33, 0x38,
+                        0x37, 0x36, 0x32, 0x30, 0x33, 0x61, 0x32, 0x34, 0x61, 0x61, 0x63, 0x61,
+                        0x30, 0x38, 0x61, 0x32, 0x32, 0x61, 0x35, 0x63, 0x31, 0x0a, 0x70, 0x61,
+                        0x72, 0x65, 0x6e, 0x74, 0x20, 0x35, 0x31, 0x33, 0x63, 0x63, 0x64, 0x32,
+                        0x62, 0x36, 0x37, 0x31, 0x32, 0x34, 0x34, 0x61, 0x65, 0x65, 0x39, 0x38,
+                        0x65, 0x31, 0x66, 0x30, 0x36, 0x38, 0x34, 0x66, 0x34, 0x39, 0x65, 0x65,
+                        0x63, 0x38, 0x39, 0x37, 0x33, 0x63, 0x35, 0x31, 0x65, 0x0a, 0x61, 0x75,
+                        0x74, 0x68, 0x6f, 0x72, 0x20, 0x61, 0x20, 0x3c, 0x61, 0x40, 0x62, 0x2e,
+                        0x64, 0x65, 0x3e, 0x20, 0x31, 0x34, 0x38, 0x38, 0x30, 0x32, 0x39, 0x38,
+                        0x37, 0x34, 0x20, 0x2b, 0x30, 0x31, 0x30, 0x30, 0x0a, 0x63, 0x6f, 0x6d,
+                        0x6d, 0x69, 0x74, 0x74, 0x65, 0x72, 0x20, 0x62, 0x20, 0x3c, 0x62, 0x40,
+                        0x61, 0x2e, 0x64, 0x65, 0x3e, 0x20, 0x31, 0x34, 0x38, 0x38, 0x30, 0x35,
+                        0x38, 0x39, 0x35, 0x39, 0x20, 0x2b, 0x30, 0x31, 0x30, 0x30, 0x0a, 0x0a,
+                        0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x74, 0x65,
+                        0x73, 0x74, 0x0a];
         let mut reader = BufReader::new(&data[..]);
 
         match Commit::from_object_data("sha", &mut reader) {
             Ok(c) => {
                 assert_eq!(c.sha, "sha");
-                assert_eq!(c.message, "Hello World\n");
+                assert_eq!(c.tree, "08f486d27d63ed7f83876203a24aaca08a22a5c1");
+                assert_eq!(c.parent.unwrap(), "513ccd2b671244aee98e1f0684f49eec8973c51e");
+                assert_eq!(c.author, "a <a@b.de> 1488029874 +0100");
+                assert_eq!(c.committer, "b <b@a.de> 1488058959 +0100");
+                assert_eq!(c.message, "\nThis is a test\n");
             }
             Err(err) => assert!(false, err),
         }
