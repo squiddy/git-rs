@@ -80,15 +80,15 @@ impl fmt::Debug for Commit {
     }
 }
 
-struct TreeEntry {
-    sha: String,
-    filename: String,
-    mode: String,
+pub struct TreeEntry {
+    pub sha: String,
+    pub filename: String,
+    pub mode: String,
 }
 
 pub struct Tree {
-    sha: String,
-    entries: Vec<TreeEntry>,
+    pub sha: String,
+    pub entries: Vec<TreeEntry>,
 }
 
 impl Tree {

@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use objects::{Object, read_object_file};
 
 /// Starting from `path` walks up the tree to find a git directory and returns
 /// it if found.
@@ -12,6 +13,28 @@ pub fn find_git_directory(path: &Path) -> Option<PathBuf> {
     }
 
     Some(dir.join(".git"))
+}
+
+pub struct Repository {
+    directory: PathBuf,
+}
+
+impl Repository {
+    pub fn open(path: &Path) -> Result<Repository, &'static str> {
+        match find_git_directory(path) {
+            Some(dir) => Ok(Repository { directory: dir }),
+            None => Err("failed to open repository")
+        }
+    }
+
+    pub fn find_object(&self, sha: &str) -> Object {
+        let mut path = self.directory.clone();
+        path.push("objects");
+        path.push(&sha[..2]);
+        path.push(&sha[2..]);
+
+        read_object_file(&sha, path.to_str().unwrap())
+    }
 }
 
 #[cfg(test)]
