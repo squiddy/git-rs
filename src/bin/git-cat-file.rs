@@ -1,36 +1,18 @@
 extern crate git_rs;
-extern crate getopts;
+extern crate clap;
 
 use std::env;
-use getopts::Options;
+use clap::{Arg, App};
 use git_rs::{Repository, Object};
 
-fn print_usage(opts: Options) {
-    print!("{}", opts.usage("Usage: git-cat-file SHA"));
-}
-
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    let matches = App::new("")
+        .arg(Arg::with_name("SHA")
+            .help("The commit id to show information for")
+            .required(true))
+        .get_matches();
 
-    let mut opts = Options::new();
-    opts.optflag("h", "help", "");
-    opts.optopt("s", "sha", "", "SHA");
-
-    let matches = match opts.parse(&args[1..]) {
-        Ok(m) => m,
-        Err(f) => {
-            println!("Error: {}", f.to_string());
-            print_usage(opts);
-            return;
-        }
-    };
-
-    if matches.opt_present("h") {
-        print_usage(opts);
-        return;
-    }
-
-    let sha = env::args().nth(1).expect("Expected sha");
+    let sha = matches.value_of("SHA").unwrap();
     let cwd = env::current_dir().expect("Can't get current directory");
 
     if let Ok(repo) = Repository::open(&cwd) {
