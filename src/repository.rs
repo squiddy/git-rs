@@ -23,11 +23,11 @@ impl Repository {
     pub fn open(path: &Path) -> Result<Repository, &'static str> {
         match find_git_directory(path) {
             Some(dir) => Ok(Repository { directory: dir }),
-            None => Err("failed to open repository")
+            None => Err("failed to open repository"),
         }
     }
 
-    pub fn find_object(&self, sha: &str) -> Object {
+    pub fn find_object(&self, sha: &str) -> Result<Object, String> {
         let mut path = self.directory.clone();
         path.push("objects");
         path.push(&sha[..2]);

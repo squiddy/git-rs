@@ -8,7 +8,7 @@ use flate2::read::ZlibDecoder;
 use rustc_serialize::hex::ToHex;
 
 trait GitObject {
-    fn from_object_data<B: BufRead>(sha: &str, reader: &mut B) -> Result<Self, &'static str>
+    fn from_object_data<B: BufRead>(sha: &str, reader: &mut B) -> Result<Self, String>
         where Self: Sized;
 }
 
@@ -32,7 +32,7 @@ impl Blob {
 
 impl GitObject for Blob {
     // Construct a blob from the given input.
-    fn from_object_data<B: BufRead>(sha: &str, reader: &mut B) -> Result<Blob, &'static str> {
+    fn from_object_data<B: BufRead>(sha: &str, reader: &mut B) -> Result<Blob, String> {
         let mut data = vec![];
         reader.read_to_end(&mut data);
 
@@ -71,7 +71,7 @@ impl Commit {
 
 impl GitObject for Commit {
     // Construct a commit from the given input.
-    fn from_object_data<B: BufRead>(sha: &str, reader: &mut B) -> Result<Commit, &'static str> {
+    fn from_object_data<B: BufRead>(sha: &str, reader: &mut B) -> Result<Commit, String> {
         // Read a line of the form "identifier other information" and returns
         // it as tuple ("identifier", "other information")
         fn read_line<B: BufRead>(reader: &mut B) -> (String, String) {
@@ -149,7 +149,7 @@ impl Tree {
 
 impl GitObject for Tree {
     // Construct a tree from the given input.
-    fn from_object_data<B: BufRead>(sha: &str, reader: &mut B) -> Result<Tree, &'static str> {
+    fn from_object_data<B: BufRead>(sha: &str, reader: &mut B) -> Result<Tree, String> {
         let mut buffer = vec![];
         let mut entries = vec![];
 
@@ -172,7 +172,7 @@ impl GitObject for Tree {
             })
         }
 
-        Ok::<Tree, &'static str>(Tree {
+        Ok(Tree {
             sha: sha.to_string(),
             entries: entries,
         })
@@ -189,29 +189,35 @@ impl fmt::Debug for Tree {
 //
 // Will delegate to specific implementations according to the type in the
 // header.
-fn read_object<R: Read>(sha: &str, input: R) -> Object {
+fn read_object<R: Read>(sha: &str, input: R) -> Result<Object, String> {
     let decoder = ZlibDecoder::new(input);
     let mut reader = BufReader::new(decoder);
 
-    {
-        let mut buffer = vec![];
-        reader.read_until(0, &mut buffer);
-        let header = str::from_utf8(&buffer[..buffer.len() - 1]).unwrap();
-        match header.splitn(2, ' ').next() {
-            Some("tree") => Object::Tree(Tree::from_object_data(sha, &mut reader).unwrap()),
-            Some("commit") => Object::Commit(Commit::from_object_data(sha, &mut reader).unwrap()),
-            Some("blob") => Object::Blob(Blob::from_object_data(sha, &mut reader).unwrap()),
-            _ => panic!("error"),
+    let mut buffer = vec![];
+    reader.read_until(0, &mut buffer);
+    let header = str::from_utf8(&buffer[..buffer.len() - 1]).map_err(|err| err.to_string())?;
+
+    match header.splitn(2, ' ').next() {
+        Some("tree") => {
+            let tree = Tree::from_object_data(sha, &mut reader)?;
+            Ok(Object::Tree(tree))
         }
+        Some("commit") => {
+            let commit = Commit::from_object_data(sha, &mut reader)?;
+            Ok(Object::Commit(commit))
+        }
+        Some("blob") => {
+            let blob = Blob::from_object_data(sha, &mut reader)?;
+            Ok(Object::Blob(blob))
+        }
+        _ => Err("unknown object type".to_string()),
     }
 }
 
 /// Returns an object parsed from the object file given by `path`.
-pub fn read_object_file(sha: &str, path: &str) -> Object {
-    match File::open(path) {
-        Ok(f) => read_object(sha, f),
-        Err(err) => panic!(err),
-    }
+pub fn read_object_file(sha: &str, path: &str) -> Result<Object, String> {
+    let file = File::open(path).map_err(|err| err.to_string())?;
+    read_object(sha, file)
 }
 
 #[cfg(test)]
@@ -282,7 +288,8 @@ mod tests {
             Ok(c) => {
                 assert_eq!(c.sha, "sha");
                 assert_eq!(c.tree, "08f486d27d63ed7f83876203a24aaca08a22a5c1");
-                assert_eq!(c.parent.unwrap(), "513ccd2b671244aee98e1f0684f49eec8973c51e");
+                assert_eq!(c.parent.unwrap(),
+                           "513ccd2b671244aee98e1f0684f49eec8973c51e");
                 assert_eq!(c.author, "a <a@b.de> 1488029874 +0100");
                 assert_eq!(c.committer, "b <b@a.de> 1488058959 +0100");
                 assert_eq!(c.message, "\nThis is a test\n");
