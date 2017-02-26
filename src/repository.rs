@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use objects::{Object, read_object_file};
+use objects::{Object, read_object_file, Commit};
 
 /// Starting from `path` walks up the tree to find a git directory and returns
 /// it if found.
@@ -34,6 +34,35 @@ impl Repository {
         path.push(&sha[2..]);
 
         read_object_file(&sha, path.to_str().unwrap())
+    }
+
+    pub fn find_commit(&self, sha: &str) -> Result<Commit, String> {
+        let object = self.find_object(sha)?;
+        match object {
+            Object::Commit(c) => Ok(c),
+            _ => Err("Not a commit object".to_string())
+        }
+    }
+
+    pub fn log(&self, sha: &str) -> Result<Vec<Commit>, String> {
+        let mut results = vec![];
+        let mut sha = sha.to_owned();
+
+        loop {
+            let commit = self.find_commit(&sha)?;
+
+            sha = match commit.parent {
+                Some(ref sha) => sha.clone(),
+                None => {
+                    results.push(commit);
+                    break;
+                }
+            };
+
+            results.push(commit);
+        }
+
+        Ok(results)
     }
 }
 

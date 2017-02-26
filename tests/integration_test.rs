@@ -55,3 +55,20 @@ fn find_commit_object() {
         _ => assert!(false, "Object not found or unexpected type")
     }
 }
+
+#[test]
+fn commit_log() {
+    // FIXME This will break as soon as git packs objects.
+    let repo = Repository::open(Path::new(".git")).unwrap();
+
+    match repo.log("7a31ace70bde3931e9fbf44c69db80850b2aa5ef") {
+        Ok(commits) => {
+            assert_eq!(commits.len(), 4);
+            assert_eq!(commits[0].sha, "7a31ace70bde3931e9fbf44c69db80850b2aa5ef");
+            assert_eq!(commits[1].sha, "da7a94937cb5bf2635ad143412a3bbe5ab67ff22");
+            assert_eq!(commits[2].sha, "e4a9c098f6d1bef856bfeab26e993401c4c05eb2");
+            assert_eq!(commits[3].sha, "513ccd2b671244aee98e1f0684f49eec8973c51e");
+        },
+        Err(err) => assert!(false, err)
+    }
+}
