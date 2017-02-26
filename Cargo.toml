@@ -11,3 +11,7 @@ ansi_term = "0.9"
 
 [dev-dependencies]
 tempdir = "0.3"
+
+[[bin]]
+doc = false
+name = "git-rs"
