@@ -33,7 +33,7 @@ impl Repository {
         path.push(&sha[..2]);
         path.push(&sha[2..]);
 
-        read_object_file(&sha, path.to_str().unwrap())
+        read_object_file(sha, path.to_str().unwrap())
     }
 
     pub fn find_commit(&self, sha: &str) -> Result<Commit, String> {

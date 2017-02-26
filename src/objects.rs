@@ -20,6 +20,7 @@ pub enum Object {
 
 pub struct Blob {
     sha: String,
+    #[allow(dead_code)]
     data: Vec<u8>,
 }
 
@@ -34,7 +35,7 @@ impl GitObject for Blob {
     // Construct a blob from the given input.
     fn from_object_data<B: BufRead>(sha: &str, reader: &mut B) -> Result<Blob, String> {
         let mut data = vec![];
-        reader.read_to_end(&mut data);
+        reader.read_to_end(&mut data).map_err(|err| err.to_string())?;
 
         Ok(Blob {
             sha: sha.to_string(),
@@ -91,7 +92,7 @@ impl GitObject for Commit {
             let (_, committer) = read_line(reader);
 
             let mut message = String::new();
-            reader.read_to_string(&mut message);
+            reader.read_to_string(&mut message).map_err(|err| err.to_string())?;
 
             Ok(Commit {
                 sha: sha.to_string(),
@@ -107,7 +108,7 @@ impl GitObject for Commit {
             let (_, committer) = read_line(reader);
 
             let mut message = String::new();
-            reader.read_to_string(&mut message);
+            reader.read_to_string(&mut message).map_err(|err| err.to_string())?;
 
             Ok(Commit {
                 sha: sha.to_string(),
@@ -163,7 +164,7 @@ impl GitObject for Tree {
             let matches: Vec<&str> = line.splitn(2, ' ').collect();
 
             let mut sha = [0; 20];
-            reader.read_exact(&mut sha);
+            reader.read_exact(&mut sha).map_err(|err| err.to_string())?;
 
             entries.push(TreeEntry {
                 sha: sha.to_hex(),
@@ -194,7 +195,7 @@ fn read_object<R: Read>(sha: &str, input: R) -> Result<Object, String> {
     let mut reader = BufReader::new(decoder);
 
     let mut buffer = vec![];
-    reader.read_until(0, &mut buffer);
+    reader.read_until(0, &mut buffer).map_err(|err| err.to_string())?;
     let header = str::from_utf8(&buffer[..buffer.len() - 1]).map_err(|err| err.to_string())?;
 
     match header.splitn(2, ' ').next() {
