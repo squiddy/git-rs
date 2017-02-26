@@ -61,6 +61,10 @@ pub struct Commit {
 impl Commit {
     // Debug output of the whole object
     pub fn print(&self) {
+        println!("Tree {}", self.tree);
+        println!("Parent {:?}", self.parent);
+        println!("Author {}", self.author);
+        println!("Committer {}", self.committer);
         println!("{}", self.message);
     }
 }

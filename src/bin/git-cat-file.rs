@@ -6,8 +6,7 @@ use getopts::Options;
 use git_rs::{Repository, Object};
 
 fn print_usage(opts: Options) {
-    let brief = format!("Usage: git-cat-file SHA");
-    print!("{}", opts.usage(&brief));
+    print!("{}", opts.usage("Usage: git-cat-file SHA"));
 }
 
 fn main() {
@@ -31,7 +30,7 @@ fn main() {
         return;
     }
 
-    let sha = env::args().skip(1).next().expect("Expected sha");
+    let sha = env::args().nth(1).expect("Expected sha");
     let cwd = env::current_dir().expect("Can't get current directory");
 
     if let Ok(repo) = Repository::open(&cwd) {

@@ -6,6 +6,16 @@ git-rs
 A git reader implemented in Rust. The primary goal here is to learn Rust, so
 this won't even be near feature complete.
 
+## Development
+
+### Running tests
+
+`cargo test`
+
+### Run clippy checks
+
+`rustup run nightly cargo clippy`
+
 ## License
 
 git-rs is released under the [MIT License].
