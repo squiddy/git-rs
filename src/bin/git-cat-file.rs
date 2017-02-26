@@ -1,8 +1,10 @@
 extern crate git_rs;
 extern crate clap;
+extern crate ansi_term;
 
 use std::env;
 use clap::{Arg, App};
+use ansi_term::Colour::{Red};
 use git_rs::{Repository, Object};
 
 fn run(sha: &str) -> Result<(), String> {
@@ -30,6 +32,6 @@ fn main() {
 
     match run(sha) {
         Ok(()) => (),
-        Err(err) => println!("Error: {}", err),
+        Err(err) => println!("{}", Red.paint(format!("Error: {}", err)))
     }
 }

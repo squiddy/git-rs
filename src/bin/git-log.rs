@@ -1,8 +1,10 @@
 extern crate git_rs;
 extern crate clap;
+extern crate ansi_term;
 
 use std::env;
 use clap::{Arg, App};
+use ansi_term::Colour::{Yellow, Red};
 use git_rs::{Repository};
 
 fn run(sha: &str) -> Result<(), String> {
@@ -10,7 +12,7 @@ fn run(sha: &str) -> Result<(), String> {
     let repo = Repository::open(&cwd)?;
 
     for commit in repo.log(sha)? {
-        println!("commit {}", commit.sha);
+        println!("{}", Yellow.paint(format!("commit {}", commit.sha)));
         println!("Author: {}", commit.author);
 
         for line in commit.message.lines() {
@@ -34,6 +36,6 @@ fn main() {
 
     match run(sha) {
         Ok(()) => (),
-        Err(err) => println!("Error: {}", err)
+        Err(err) => println!("{}", Red.paint(format!("Error: {}", err)))
     }
 }
